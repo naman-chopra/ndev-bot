@@ -24,16 +24,16 @@ async function answerCallback(callbackQueryId, text = "", showAlert = false) {
 function getMainMenuKeyboard(appUrl) {
   const keyboard = [
     [
-      { text: "🧘 MoodyRoutine", callback_data: "project:moody" },
-      { text: "🕒 Clockity", callback_data: "project:clockity" }
+      { text: "MoodyRoutine", callback_data: "project:moody" },
+      { text: "Clockity", callback_data: "project:clockity" }
     ],
     [
-      { text: "🛠️ Open Dev Deck (Mini App)", web_app: { url: appUrl } }
+      { text: "Dev Deck (Mini App)", web_app: { url: appUrl } }
     ],
     [
-      { text: "🔍 F-Droid !52105", callback_data: "action:fdroid:52105" },
-      { text: "📊 Health", callback_data: "action:health" },
-      { text: "🧹 Clear", callback_data: "action:clear" }
+      { text: "F-Droid MR !52105", callback_data: "action:fdroid:52105" },
+      { text: "Status", callback_data: "action:health" },
+      { text: "Clear Chat", callback_data: "action:clear" }
     ]
   ];
   return { inline_keyboard: keyboard };
@@ -44,15 +44,15 @@ function getProjectKeyboard(projectKey) {
     return {
       inline_keyboard: [
         [
-          { text: "🔍 F-Droid MR !52105", callback_data: "action:fdroid:52105" },
-          { text: "🚀 Trigger Release", callback_data: "action:build:moody" }
+          { text: "F-Droid MR !52105", callback_data: "action:fdroid:52105" },
+          { text: "Trigger Release", callback_data: "action:build:moody" }
         ],
         [
-          { text: "📦 Latest APK & Assets", callback_data: "action:release:moody" },
-          { text: "🌐 Open on GitHub", url: "https://github.com/naman-chopra/moody-routine" }
+          { text: "Download APK", callback_data: "action:release:moody" },
+          { text: "GitHub ↗", url: "https://github.com/naman-chopra/moody-routine" }
         ],
         [
-          { text: "🔙 Back to Projects", callback_data: "menu:main" }
+          { text: "« Back to Projects", callback_data: "menu:main" }
         ]
       ]
     };
@@ -62,21 +62,21 @@ function getProjectKeyboard(projectKey) {
     return {
       inline_keyboard: [
         [
-          { text: "🚀 Trigger Build", callback_data: "action:build:clockity" },
-          { text: "📦 Latest Releases", callback_data: "action:release:clockity" }
+          { text: "Trigger Build", callback_data: "action:build:clockity" },
+          { text: "Releases", callback_data: "action:release:clockity" }
         ],
         [
-          { text: "🌐 Open on GitHub", url: "https://github.com/naman-chopra/Clockity" }
+          { text: "GitHub ↗", url: "https://github.com/naman-chopra/Clockity" }
         ],
         [
-          { text: "🔙 Back to Projects", callback_data: "menu:main" }
+          { text: "« Back to Projects", callback_data: "menu:main" }
         ]
       ]
     };
   }
 
   return {
-    inline_keyboard: [[{ text: "🔙 Back to Projects", callback_data: "menu:main" }]]
+    inline_keyboard: [[{ text: "« Back to Projects", callback_data: "menu:main" }]]
   };
 }
 
@@ -163,7 +163,7 @@ export default async function handler(req, res) {
         await tgRequest("editMessageText", {
           chat_id: chatId,
           message_id: messageId,
-          text: "🤖 <b>Ndev Developer Control Deck</b>\n\nSelect a project to inspect or trigger actions:",
+          text: "<b>Ndev Developer Control Deck</b>\n\nSelect a project to inspect or trigger actions:",
           parse_mode: "HTML",
           reply_markup: getMainMenuKeyboard(APP_URL)
         });
@@ -172,7 +172,7 @@ export default async function handler(req, res) {
         await tgRequest("editMessageText", {
           chat_id: chatId,
           message_id: messageId,
-          text: "🧘 <b>MoodyRoutine</b> (v1.0.1)\n\n• <b>Repository:</b> naman-chopra/moody-routine\n• <b>F-Droid MR:</b> !52105 (Smoke testing / Review)\n• <b>License:</b> GPL-3.0\n\nSelect an action:",
+          text: "<b>MoodyRoutine</b> (v1.0.1)\n\n• Repository: naman-chopra/moody-routine\n• F-Droid MR: !52105 (Smoke testing / Review)\n• License: GPL-3.0\n\nSelect an action:",
           parse_mode: "HTML",
           reply_markup: getProjectKeyboard("moody")
         });
@@ -181,7 +181,7 @@ export default async function handler(req, res) {
         await tgRequest("editMessageText", {
           chat_id: chatId,
           message_id: messageId,
-          text: "🕒 <b>Clockity</b>\n\n• <b>Repository:</b> naman-chopra/Clockity\n• <b>F-Droid:</b> Ready for submission\n\nSelect an action:",
+          text: "<b>Clockity</b>\n\n• Repository: naman-chopra/Clockity\n• F-Droid: Ready for submission\n\nSelect an action:",
           parse_mode: "HTML",
           reply_markup: getProjectKeyboard("clockity")
         });
@@ -191,11 +191,11 @@ export default async function handler(req, res) {
           const mrRes = await fetch("https://gitlab.com/api/v4/projects/36528/merge_requests/52105");
           const mr = await mrRes.json();
           const labels = mr.labels ? mr.labels.join(", ") : "None";
-          const statusText = `🔍 <b>F-Droid MR !52105 Status</b>\n\n` +
-            `• <b>State:</b> ${mr.state} (${mr.detailed_merge_status || 'ok'})\n` +
-            `• <b>Total Comments:</b> ${mr.user_notes_count}\n` +
-            `• <b>Labels:</b> ${labels}\n` +
-            `• <b>Last Updated:</b> ${mr.updated_at}\n\n` +
+          const statusText = `<b>F-Droid MR !52105 Status</b>\n\n` +
+            `• State: ${mr.state} (${mr.detailed_merge_status || 'ok'})\n` +
+            `• Total Comments: ${mr.user_notes_count}\n` +
+            `• Labels: ${labels}\n` +
+            `• Last Updated: ${mr.updated_at}\n\n` +
             `<i>Status: Passed all 9 CI checks, recipe approved by maintainer linsui.</i>`;
 
           await tgRequest("editMessageText", {
@@ -205,8 +205,8 @@ export default async function handler(req, res) {
             parse_mode: "HTML",
             reply_markup: {
               inline_keyboard: [
-                [{ text: "🌐 Open MR on GitLab ↗", url: mr.web_url || "https://gitlab.com/fdroid/fdroiddata/-/merge_requests/52105" }],
-                [{ text: "🔙 Back to MoodyRoutine", callback_data: "project:moody" }]
+                [{ text: "Open MR on GitLab ↗", url: mr.web_url || "https://gitlab.com/fdroid/fdroiddata/-/merge_requests/52105" }],
+                [{ text: "« Back to MoodyRoutine", callback_data: "project:moody" }]
               ]
             }
           });
@@ -263,28 +263,28 @@ export default async function handler(req, res) {
             await tgRequest("editMessageText", {
               chat_id: chatId,
               message_id: messageId,
-              text: `📦 <b>No releases found for ${repoFullName} yet.</b>`,
+              text: `<b>No releases found for ${repoFullName} yet.</b>`,
               parse_mode: "HTML",
               reply_markup: {
-                inline_keyboard: [[{ text: "🔙 Back", callback_data: `project:${repo}` }]]
+                inline_keyboard: [[{ text: "« Back", callback_data: `project:${repo}` }]]
               }
             });
             return res.status(200).json({ ok: true });
           }
 
-          let msgText = `📦 <b>Latest Release: ${rel.name || rel.tag_name}</b>\n\n`;
+          let msgText = `<b>Latest Release: ${rel.name || rel.tag_name}</b>\n\n`;
           const buttons = [];
           if (rel.assets && rel.assets.length > 0) {
             msgText += `<b>Available Artifacts:</b>\n`;
             for (const asset of rel.assets) {
               const sizeMb = (asset.size / (1024 * 1024)).toFixed(2);
               msgText += `• <code>${asset.name}</code> (${sizeMb} MB)\n`;
-              buttons.push([{ text: `📥 Download ${asset.name}`, url: asset.browser_download_url }]);
+              buttons.push([{ text: `Download ${asset.name}`, url: asset.browser_download_url }]);
             }
           } else {
             msgText += `<i>No uploaded binary assets.</i>\n`;
           }
-          buttons.push([{ text: "🔙 Back", callback_data: `project:${repo}` }]);
+          buttons.push([{ text: "« Back", callback_data: `project:${repo}` }]);
 
           await tgRequest("editMessageText", {
             chat_id: chatId,
@@ -301,10 +301,10 @@ export default async function handler(req, res) {
         await tgRequest("editMessageText", {
           chat_id: chatId,
           message_id: messageId,
-          text: `📊 <b>System Health Report</b>\n\n• <b>Vercel API:</b> 🟢 Operational\n• <b>Telegram Webhook:</b> 🟢 Connected\n• <b>F-Droid Monitor:</b> 🟢 Active (every 30m)\n• <b>GitHub Actions:</b> 🟢 Connected\n\nAll monitors running smoothly.`,
+          text: `<b>System Status</b>\n\n• Vercel API: Operational\n• Telegram Webhook: Connected\n• F-Droid Monitor: Active (every 30m)\n• GitHub Actions: Connected\n\nAll monitors running smoothly.`,
           parse_mode: "HTML",
           reply_markup: {
-            inline_keyboard: [[{ text: "🔙 Back to Projects", callback_data: "menu:main" }]]
+            inline_keyboard: [[{ text: "« Back to Projects", callback_data: "menu:main" }]]
           }
         });
       } else if (data === "action:clear") {
@@ -323,7 +323,7 @@ export default async function handler(req, res) {
         }
         await tgRequest("sendMessage", {
           chat_id: chatId,
-          text: "🧹 <b>Chat cleared.</b>",
+          text: "<b>Chat cleared.</b>",
           parse_mode: "HTML",
           reply_markup: getMainMenuKeyboard(APP_URL)
         });

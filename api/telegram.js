@@ -41,6 +41,7 @@ function buildDynamicMainMenuKeyboard(repos, appUrl) {
   // Utility row
   keyboard.push([
     { text: "Status", callback_data: "action:health" },
+    { text: "Help", callback_data: "action:help" },
     { text: "Clear Chat", callback_data: "action:clear" }
   ]);
 
@@ -107,6 +108,37 @@ export default async function handler(req, res) {
           chat_id: chatId,
           text: "<b>Status:</b> All systems and monitors operational.",
           parse_mode: "HTML"
+        });
+      } else if (text.startsWith("/help")) {
+        const helpText =
+          `<b>Ndev Bot & Dev Deck Reference</b>\n\n` +
+          `<b>Commands:</b>\n` +
+          `• <code>/start</code> - Project selector & interactive action cards\n` +
+          `• <code>/clear [n]</code> - Purge recent messages without resetting\n` +
+          `• <code>/status</code> - Service & monitor health\n` +
+          `• <code>/help</code> - Show this reference\n` +
+          `• <code>/id</code> - Chat routing info\n\n` +
+          `<b>Features:</b>\n` +
+          `1. <b>Auto Project Detection:</b> Discovers Kotlin/Java apps and repos tagged <code>ndev</code> / <code>android</code>.\n` +
+          `2. <b>F-Droid Tracking:</b> Discovers GitLab MRs authored by you and alerts on reviews and merges.\n` +
+          `3. <b>Build Triggers:</b> Dispatch releases via GitHub Actions.\n` +
+          `4. <b>Artifact Delivery:</b> Download latest APKs.\n` +
+          `5. <b>Dev Deck Mini App:</b> Full touch dashboard.\n\n` +
+          `<b>Onboarding Other Repos:</b>\n` +
+          `See the complete step-by-step guide:`;
+
+        await tgRequest("sendMessage", {
+          chat_id: chatId,
+          text: helpText,
+          parse_mode: "HTML",
+          disable_web_page_preview: true,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "Onboarding Guide ↗", url: "https://github.com/naman-chopra/ndev-bot/blob/main/ONBOARDING.md" }],
+              [{ text: "Dev Deck (Mini App)", web_app: { url: APP_URL } }],
+              [{ text: "« Back to Projects", callback_data: "menu:main" }]
+            ]
+          }
         });
       } else if (text.startsWith("/clear")) {
         const currentMsgId = msg.message_id;
@@ -319,6 +351,31 @@ export default async function handler(req, res) {
           parse_mode: "HTML",
           reply_markup: {
             inline_keyboard: [[{ text: "« Back to Projects", callback_data: "menu:main" }]]
+          }
+        });
+      } else if (data === "action:help") {
+        await answerCallback(query.id);
+        const helpText =
+          `<b>Ndev Bot & Dev Deck Reference</b>\n\n` +
+          `<b>Capabilities:</b>\n` +
+          `• <b>Auto-Discovery:</b> Auto-detects Android/Kotlin apps and binds F-Droid MRs.\n` +
+          `• <b>Actions:</b> Trigger builds, download signed APKs, check MR reviews.\n` +
+          `• <b>Mini App:</b> Tap \"Dev Deck\" in the bottom corner for mobile dashboard.\n\n` +
+          `<b>Commands:</b> <code>/start</code>, <code>/clear [n]</code>, <code>/status</code>, <code>/help</code>, <code>/id</code>\n\n` +
+          `<b>Onboarding Other Repos:</b>\n` +
+          `Read the step-by-step setup guide for new repositories:`;
+
+        await tgRequest("editMessageText", {
+          chat_id: chatId,
+          message_id: messageId,
+          text: helpText,
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "Onboarding Guide ↗", url: "https://github.com/naman-chopra/ndev-bot/blob/main/ONBOARDING.md" }],
+              [{ text: "Dev Deck (Mini App)", web_app: { url: APP_URL } }],
+              [{ text: "« Back to Projects", callback_data: "menu:main" }]
+            ]
           }
         });
       } else if (data === "action:clear") {

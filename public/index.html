@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ndev Dev Deck</title>
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <div class="header-left">
+        <div class="logo-icon">🚀</div>
+        <div>
+          <h1>Ndev Dev Deck</h1>
+          <p class="subtitle" id="user-greeting">Developer Console</p>
+        </div>
+      </div>
+      <div class="status-indicator online">
+        <span class="dot"></span>
+        <span class="status-text">Online</span>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- Active Projects Section -->
+      <section class="section">
+        <h2 class="section-title">Active Projects</h2>
+
+        <!-- MoodyRoutine Card -->
+        <div class="card project-card">
+          <div class="card-header">
+            <div class="project-title">
+              <span class="project-icon">🧘</span>
+              <div>
+                <h3>MoodyRoutine</h3>
+                <span class="version-tag">v1.0.1 • GPL-3.0</span>
+              </div>
+            </div>
+            <span class="badge badge-success">Stable</span>
+          </div>
+
+          <div class="project-meta">
+            <div class="meta-row">
+              <span class="meta-label">F-Droid MR:</span>
+              <a href="https://gitlab.com/fdroid/fdroiddata/-/merge_requests/52105" target="_blank" class="meta-link">!52105 (Smoke Testing)</a>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">CI Pipeline:</span>
+              <span class="meta-value text-green">9/9 Passed (Green)</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Reproducible:</span>
+              <span class="meta-value text-blue">100% Bit-Identical</span>
+            </div>
+          </div>
+
+          <div class="button-group">
+            <button class="btn btn-secondary" onclick="checkFdroidMR()">
+              <span>🔍 Check MR !52105</span>
+            </button>
+            <a href="https://github.com/naman-chopra/moody-routine/releases/latest" target="_blank" class="btn btn-primary">
+              <span>📥 Latest APK</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Clockity Card -->
+        <div class="card project-card">
+          <div class="card-header">
+            <div class="project-title">
+              <span class="project-icon">🕒</span>
+              <div>
+                <h3>Clockity</h3>
+                <span class="version-tag">Main • Android</span>
+              </div>
+            </div>
+            <span class="badge badge-neutral">Ready</span>
+          </div>
+
+          <div class="project-meta">
+            <div class="meta-row">
+              <span class="meta-label">Repository:</span>
+              <span class="meta-value">naman-chopra/Clockity</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">F-Droid Status:</span>
+              <span class="meta-value text-muted">Ready for recipe</span>
+            </div>
+          </div>
+
+          <div class="button-group">
+            <a href="https://github.com/naman-chopra/Clockity" target="_blank" class="btn btn-secondary">
+              <span>🌐 View Repository ↗</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bot Commands Reference -->
+      <section class="section">
+        <h2 class="section-title">Quick Controls</h2>
+        <div class="card">
+          <ul class="control-list">
+            <li>
+              <strong>/start</strong>
+              <span>Interactive project selector & buttons</span>
+            </li>
+            <li>
+              <strong>/status</strong>
+              <span>Check 24/7 background monitors</span>
+            </li>
+            <li>
+              <strong>/id</strong>
+              <span>View Chat ID & Telegram routing</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Ndev Developer Deck • Powered by Telegram Mini Apps</p>
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "ndev-bot",
+  "version": "1.0.0",
+  "description": "Telegram Bot & Mini App Developer Deck for Ndev Projects",
+  "main": "api/telegram.js",
+  "scripts": {
+    "start": "node api/telegram.js"
+  },
+  "keywords": ["telegram", "bot", "mini-app", "tma", "github-actions", "fdroid"],
+  "author": "Naman Chopra",
+  "license": "GPL-3.0"
+}

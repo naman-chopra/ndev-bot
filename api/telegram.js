@@ -31,8 +31,9 @@ function getMainMenuKeyboard(appUrl) {
       { text: "🛠️ Open Dev Deck (Mini App)", web_app: { url: appUrl } }
     ],
     [
-      { text: "🔍 Check F-Droid MR !52105", callback_data: "action:fdroid:52105" },
-      { text: "📊 System Health", callback_data: "action:health" }
+      { text: "🔍 F-Droid !52105", callback_data: "action:fdroid:52105" },
+      { text: "📊 Health", callback_data: "action:health" },
+      { text: "🧹 Clear", callback_data: "action:clear" }
     ]
   ];
   return { inline_keyboard: keyboard };
@@ -115,11 +116,31 @@ export default async function handler(req, res) {
           text: `🔑 <b>Chat Info</b>\nYour User ID: <code>${userId}</code>\nChat ID: <code>${chatId}</code>`,
           parse_mode: "HTML"
         });
-      } else if (text.startsWith("/status")) {
+      } else if (text.startsWith("/clear")) {
+        const currentMsgId = msg.message_id;
+        const parts = text.trim().split(/\s+/);
+        const count = parts.length > 1 && !isNaN(parseInt(parts[1], 10))
+          ? Math.min(Math.max(parseInt(parts[1], 10), 1), 100)
+          : 100;
+
+        const idsToDelete = [];
+        for (let i = 0; i < count; i++) {
+          const id = currentMsgId - i;
+          if (id > 0) idsToDelete.push(id);
+        }
+
+        if (idsToDelete.length > 0) {
+          await tgRequest("deleteMessages", {
+            chat_id: chatId,
+            message_ids: idsToDelete
+          });
+        }
+
         await tgRequest("sendMessage", {
           chat_id: chatId,
-          text: "🟢 <b>Status:</b> All systems and monitors operational.",
-          parse_mode: "HTML"
+          text: "🧹 <b>Chat cleared.</b>",
+          parse_mode: "HTML",
+          reply_markup: isAdmin ? getMainMenuKeyboard(APP_URL) : undefined
         });
       }
     }
@@ -285,6 +306,26 @@ export default async function handler(req, res) {
           reply_markup: {
             inline_keyboard: [[{ text: "🔙 Back to Projects", callback_data: "menu:main" }]]
           }
+        });
+      } else if (data === "action:clear") {
+        await answerCallback(query.id, "Clearing messages...");
+        const currentMsgId = messageId;
+        const idsToDelete = [];
+        for (let i = 0; i < 50; i++) {
+          const id = currentMsgId - i;
+          if (id > 0) idsToDelete.push(id);
+        }
+        if (idsToDelete.length > 0) {
+          await tgRequest("deleteMessages", {
+            chat_id: chatId,
+            message_ids: idsToDelete
+          });
+        }
+        await tgRequest("sendMessage", {
+          chat_id: chatId,
+          text: "🧹 <b>Chat cleared.</b>",
+          parse_mode: "HTML",
+          reply_markup: getMainMenuKeyboard(APP_URL)
         });
       }
     }

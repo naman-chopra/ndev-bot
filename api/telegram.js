@@ -1,3 +1,5 @@
+import { getSupportedRepos } from "../lib/repos.js";
+
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const ADMIN_ID = process.env.ADMIN_CHAT_ID ? parseInt(process.env.ADMIN_CHAT_ID, 10) : 1353039558;
 const GH_TOKEN = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
@@ -21,63 +23,47 @@ async function answerCallback(callbackQueryId, text = "", showAlert = false) {
   });
 }
 
-function getMainMenuKeyboard(appUrl) {
-  const keyboard = [
-    [
-      { text: "MoodyRoutine", callback_data: "project:moody" },
-      { text: "Clockity", callback_data: "project:clockity" }
-    ],
-    [
-      { text: "Dev Deck (Mini App)", web_app: { url: appUrl } }
-    ],
-    [
-      { text: "F-Droid MR !52105", callback_data: "action:fdroid:52105" },
-      { text: "Status", callback_data: "action:health" },
-      { text: "Clear Chat", callback_data: "action:clear" }
-    ]
-  ];
+function buildDynamicMainMenuKeyboard(repos, appUrl) {
+  const keyboard = [];
+
+  // Group detected projects 2 per row
+  for (let i = 0; i < repos.length; i += 2) {
+    const row = [{ text: repos[i].name, callback_data: `repo:${repos[i].name}` }];
+    if (i + 1 < repos.length) {
+      row.push({ text: repos[i + 1].name, callback_data: `repo:${repos[i + 1].name}` });
+    }
+    keyboard.push(row);
+  }
+
+  // Mini App button
+  keyboard.push([{ text: "Dev Deck (Mini App)", web_app: { url: appUrl } }]);
+
+  // Utility row
+  keyboard.push([
+    { text: "Status", callback_data: "action:health" },
+    { text: "Clear Chat", callback_data: "action:clear" }
+  ]);
+
   return { inline_keyboard: keyboard };
 }
 
-function getProjectKeyboard(projectKey) {
-  if (projectKey === "moody") {
-    return {
-      inline_keyboard: [
-        [
-          { text: "F-Droid MR !52105", callback_data: "action:fdroid:52105" },
-          { text: "Trigger Release", callback_data: "action:build:moody" }
-        ],
-        [
-          { text: "Download APK", callback_data: "action:release:moody" },
-          { text: "GitHub ↗", url: "https://github.com/naman-chopra/moody-routine" }
-        ],
-        [
-          { text: "« Back to Projects", callback_data: "menu:main" }
-        ]
-      ]
-    };
-  }
+function buildRepoKeyboard(repo) {
+  const keyboard = [];
+  const actionRow = [];
 
-  if (projectKey === "clockity") {
-    return {
-      inline_keyboard: [
-        [
-          { text: "Trigger Build", callback_data: "action:build:clockity" },
-          { text: "Releases", callback_data: "action:release:clockity" }
-        ],
-        [
-          { text: "GitHub ↗", url: "https://github.com/naman-chopra/Clockity" }
-        ],
-        [
-          { text: "« Back to Projects", callback_data: "menu:main" }
-        ]
-      ]
-    };
+  if (repo.fdroidMr) {
+    actionRow.push({ text: `F-Droid MR !${repo.fdroidMr.iid}`, callback_data: `action:fdroid:${repo.fdroidMr.iid}` });
   }
+  actionRow.push({ text: "Trigger Build", callback_data: `action:build:${repo.name}` });
+  keyboard.push(actionRow);
 
-  return {
-    inline_keyboard: [[{ text: "« Back to Projects", callback_data: "menu:main" }]]
-  };
+  keyboard.push([
+    { text: "Download APK", callback_data: `action:release:${repo.name}` },
+    { text: "GitHub ↗", url: repo.htmlUrl }
+  ]);
+
+  keyboard.push([{ text: "« Back to Projects", callback_data: "menu:main" }]);
+  return { inline_keyboard: keyboard };
 }
 
 export default async function handler(req, res) {
@@ -96,24 +82,30 @@ export default async function handler(req, res) {
       const userId = msg.from?.id;
       const text = msg.text || "";
 
-      // RBAC check
       const isAdmin = userId === ADMIN_ID;
 
       if (text.startsWith("/start") || text.startsWith("/menu")) {
+        const repos = await getSupportedRepos(GH_TOKEN);
         const greeting = isAdmin
-          ? "🤖 <b>Ndev Developer Control Deck</b>\n\nWelcome back! Tap any project below to manage workflows, releases, and F-Droid reviews:"
-          : "🤖 <b>Ndev Project Notifier</b>\n\nOfficial automated notification bot for Ndev mobile projects.";
+          ? "<b>Ndev Developer Control Deck</b>\n\nSelect a project:"
+          : "<b>Ndev Project Notifier</b>\n\nOfficial automated notification bot for Ndev mobile projects.";
 
         await tgRequest("sendMessage", {
           chat_id: chatId,
           text: greeting,
           parse_mode: "HTML",
-          reply_markup: isAdmin ? getMainMenuKeyboard(APP_URL) : undefined
+          reply_markup: isAdmin ? buildDynamicMainMenuKeyboard(repos, APP_URL) : undefined
         });
       } else if (text.startsWith("/id")) {
         await tgRequest("sendMessage", {
           chat_id: chatId,
           text: `🔑 <b>Chat Info</b>\nYour User ID: <code>${userId}</code>\nChat ID: <code>${chatId}</code>`,
+          parse_mode: "HTML"
+        });
+      } else if (text.startsWith("/status")) {
+        await tgRequest("sendMessage", {
+          chat_id: chatId,
+          text: "<b>Status:</b> All systems and monitors operational.",
           parse_mode: "HTML"
         });
       } else if (text.startsWith("/clear")) {
@@ -123,12 +115,14 @@ export default async function handler(req, res) {
           ? Math.min(Math.max(parseInt(parts[1], 10), 1), 100)
           : 100;
 
+        const repos = await getSupportedRepos(GH_TOKEN);
+
         // Send the new menu first so the chat never drops to 0 messages (avoids native "START" button)
         await tgRequest("sendMessage", {
           chat_id: chatId,
           text: "<b>Ndev Developer Control Deck</b>\n\nSelect a project:",
           parse_mode: "HTML",
-          reply_markup: isAdmin ? getMainMenuKeyboard(APP_URL) : undefined
+          reply_markup: isAdmin ? buildDynamicMainMenuKeyboard(repos, APP_URL) : undefined
         });
 
         // Delete the /clear command and preceding (count - 1) messages
@@ -162,43 +156,61 @@ export default async function handler(req, res) {
 
       if (data === "menu:main") {
         await answerCallback(query.id);
+        const repos = await getSupportedRepos(GH_TOKEN);
         await tgRequest("editMessageText", {
           chat_id: chatId,
           message_id: messageId,
-          text: "<b>Ndev Developer Control Deck</b>\n\nSelect a project to inspect or trigger actions:",
+          text: "<b>Ndev Developer Control Deck</b>\n\nSelect a project:",
           parse_mode: "HTML",
-          reply_markup: getMainMenuKeyboard(APP_URL)
+          reply_markup: buildDynamicMainMenuKeyboard(repos, APP_URL)
         });
-      } else if (data === "project:moody") {
+      } else if (data.startsWith("repo:")) {
+        const repoName = data.split(":")[1];
         await answerCallback(query.id);
+
+        const repos = await getSupportedRepos(GH_TOKEN);
+        const repo = repos.find(r => r.name.toLowerCase() === repoName.toLowerCase()) || {
+          name: repoName,
+          htmlUrl: `https://github.com/naman-chopra/${repoName}`,
+          description: "Android application",
+          language: "Kotlin",
+          defaultBranch: "main"
+        };
+
+        let repoText = `<b>${repo.name}</b>\n\n` +
+          `• Repository: <code>naman-chopra/${repo.name}</code>\n` +
+          `• Language: ${repo.language}\n` +
+          `• Default Branch: ${repo.defaultBranch}\n`;
+
+        if (repo.fdroidMr) {
+          repoText += `• F-Droid: MR !${repo.fdroidMr.iid} (${repo.fdroidMr.state})\n`;
+        }
+        if (repo.description) {
+          repoText += `• Description: <i>${repo.description}</i>\n`;
+        }
+        repoText += `\nSelect an action:`;
+
         await tgRequest("editMessageText", {
           chat_id: chatId,
           message_id: messageId,
-          text: "<b>MoodyRoutine</b> (v1.0.1)\n\n• Repository: naman-chopra/moody-routine\n• F-Droid MR: !52105 (Smoke testing / Review)\n• License: GPL-3.0\n\nSelect an action:",
+          text: repoText,
           parse_mode: "HTML",
-          reply_markup: getProjectKeyboard("moody")
+          reply_markup: buildRepoKeyboard(repo)
         });
-      } else if (data === "project:clockity") {
-        await answerCallback(query.id);
-        await tgRequest("editMessageText", {
-          chat_id: chatId,
-          message_id: messageId,
-          text: "<b>Clockity</b>\n\n• Repository: naman-chopra/Clockity\n• F-Droid: Ready for submission\n\nSelect an action:",
-          parse_mode: "HTML",
-          reply_markup: getProjectKeyboard("clockity")
-        });
-      } else if (data === "action:fdroid:52105") {
+      } else if (data.startsWith("action:fdroid:")) {
+        const mrIid = data.split(":")[2];
         await answerCallback(query.id, "Fetching live MR status...");
         try {
-          const mrRes = await fetch("https://gitlab.com/api/v4/projects/36528/merge_requests/52105");
+          const mrRes = await fetch(`https://gitlab.com/api/v4/projects/36528/merge_requests/${mrIid}`);
           const mr = await mrRes.json();
           const labels = mr.labels ? mr.labels.join(", ") : "None";
-          const statusText = `<b>F-Droid MR !52105 Status</b>\n\n` +
+          const statusText = `<b>F-Droid MR !${mr.iid} Status</b>\n\n` +
+            `• Title: ${mr.title}\n` +
             `• State: ${mr.state} (${mr.detailed_merge_status || 'ok'})\n` +
             `• Total Comments: ${mr.user_notes_count}\n` +
             `• Labels: ${labels}\n` +
             `• Last Updated: ${mr.updated_at}\n\n` +
-            `<i>Status: Passed all 9 CI checks, recipe approved by maintainer linsui.</i>`;
+            `<i>Review Status: Recipe approved, pending smoke test and merge.</i>`;
 
           await tgRequest("editMessageText", {
             chat_id: chatId,
@@ -207,8 +219,8 @@ export default async function handler(req, res) {
             parse_mode: "HTML",
             reply_markup: {
               inline_keyboard: [
-                [{ text: "Open MR on GitLab ↗", url: mr.web_url || "https://gitlab.com/fdroid/fdroiddata/-/merge_requests/52105" }],
-                [{ text: "« Back to MoodyRoutine", callback_data: "project:moody" }]
+                [{ text: "Open MR on GitLab ↗", url: mr.web_url || `https://gitlab.com/fdroid/fdroiddata/-/merge_requests/${mrIid}` }],
+                [{ text: "« Back to Projects", callback_data: "menu:main" }]
               ]
             }
           });
@@ -216,16 +228,16 @@ export default async function handler(req, res) {
           await answerCallback(query.id, "Failed to query GitLab API", true);
         }
       } else if (data.startsWith("action:build:")) {
-        const repo = data.split(":")[2];
-        const repoFullName = repo === "moody" ? "naman-chopra/moody-routine" : "naman-chopra/Clockity";
+        const repoName = data.split(":")[2];
+        const repoFullName = `naman-chopra/${repoName}`;
         const workflowName = "release.yml";
 
         if (!GH_TOKEN) {
-          await answerCallback(query.id, "GH_TOKEN not set on Vercel environment", true);
+          await answerCallback(query.id, "GH_TOKEN not configured on Vercel", true);
           return res.status(200).json({ ok: true });
         }
 
-        await answerCallback(query.id, `Triggering workflow on ${repo}...`);
+        await answerCallback(query.id, `Triggering build on ${repoName}...`);
         try {
           const dispatchRes = await fetch(`https://api.github.com/repos/${repoFullName}/actions/workflows/${workflowName}/dispatches`, {
             method: "POST",
@@ -240,7 +252,7 @@ export default async function handler(req, res) {
           if (dispatchRes.status === 204) {
             await tgRequest("sendMessage", {
               chat_id: chatId,
-              text: `⚡ <b>Workflow Dispatched</b>\nTriggered <code>${workflowName}</code> on <b>${repoFullName}</b>.\nYou will receive a notification when the build completes.`,
+              text: `<b>Workflow Dispatched</b>\nTriggered <code>${workflowName}</code> on <b>${repoFullName}</b>.\nYou will be notified when the build completes.`,
               parse_mode: "HTML"
             });
           } else {
@@ -251,8 +263,8 @@ export default async function handler(req, res) {
           await answerCallback(query.id, `Failed to trigger: ${e.message}`, true);
         }
       } else if (data.startsWith("action:release:")) {
-        const repo = data.split(":")[2];
-        const repoFullName = repo === "moody" ? "naman-chopra/moody-routine" : "naman-chopra/Clockity";
+        const repoName = data.split(":")[2];
+        const repoFullName = `naman-chopra/${repoName}`;
         await answerCallback(query.id, "Fetching latest release...");
 
         try {
@@ -268,7 +280,7 @@ export default async function handler(req, res) {
               text: `<b>No releases found for ${repoFullName} yet.</b>`,
               parse_mode: "HTML",
               reply_markup: {
-                inline_keyboard: [[{ text: "« Back", callback_data: `project:${repo}` }]]
+                inline_keyboard: [[{ text: "« Back", callback_data: `repo:${repoName}` }]]
               }
             });
             return res.status(200).json({ ok: true });
@@ -286,7 +298,7 @@ export default async function handler(req, res) {
           } else {
             msgText += `<i>No uploaded binary assets.</i>\n`;
           }
-          buttons.push([{ text: "« Back", callback_data: `project:${repo}` }]);
+          buttons.push([{ text: "« Back", callback_data: `repo:${repoName}` }]);
 
           await tgRequest("editMessageText", {
             chat_id: chatId,
@@ -303,7 +315,7 @@ export default async function handler(req, res) {
         await tgRequest("editMessageText", {
           chat_id: chatId,
           message_id: messageId,
-          text: `<b>System Status</b>\n\n• Vercel API: Operational\n• Telegram Webhook: Connected\n• F-Droid Monitor: Active (every 30m)\n• GitHub Actions: Connected\n\nAll monitors running smoothly.`,
+          text: `<b>System Status</b>\n\n• Vercel API: Operational\n• Telegram Webhook: Connected\n• F-Droid Monitor: Active (every 30m)\n• Auto-Repo Detection: Active\n\nAll monitors running smoothly.`,
           parse_mode: "HTML",
           reply_markup: {
             inline_keyboard: [[{ text: "« Back to Projects", callback_data: "menu:main" }]]
@@ -312,7 +324,8 @@ export default async function handler(req, res) {
       } else if (data === "action:clear") {
         await answerCallback(query.id, "Clearing messages...");
         const currentMsgId = messageId;
-        // Delete preceding (n - 1) messages, keeping the current menu intact
+        const repos = await getSupportedRepos(GH_TOKEN);
+
         const idsToDelete = [];
         for (let i = 1; i <= 50; i++) {
           const id = currentMsgId - i;
@@ -329,7 +342,7 @@ export default async function handler(req, res) {
           message_id: messageId,
           text: "<b>Ndev Developer Control Deck</b>\n\nSelect a project:",
           parse_mode: "HTML",
-          reply_markup: getMainMenuKeyboard(APP_URL)
+          reply_markup: buildDynamicMainMenuKeyboard(repos, APP_URL)
         });
       }
     }

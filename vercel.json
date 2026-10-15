@@ -2,6 +2,7 @@
   "version": 2,
   "rewrites": [
     { "source": "/api/telegram", "destination": "/api/telegram.js" },
+    { "source": "/api/repos", "destination": "/api/repos.js" },
     { "source": "/api/status", "destination": "/api/status.js" },
     { "source": "/", "destination": "/public/index.html" },
     { "source": "/(.*)", "destination": "/public/$1" }

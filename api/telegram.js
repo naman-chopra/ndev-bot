@@ -123,6 +123,15 @@ export default async function handler(req, res) {
           ? Math.min(Math.max(parseInt(parts[1], 10), 1), 100)
           : 100;
 
+        // Send the new menu first so the chat never drops to 0 messages (avoids native "START" button)
+        await tgRequest("sendMessage", {
+          chat_id: chatId,
+          text: "<b>Ndev Developer Control Deck</b>\n\nSelect a project:",
+          parse_mode: "HTML",
+          reply_markup: isAdmin ? getMainMenuKeyboard(APP_URL) : undefined
+        });
+
+        // Delete the /clear command and preceding (count - 1) messages
         const idsToDelete = [];
         for (let i = 0; i < count; i++) {
           const id = currentMsgId - i;
@@ -135,13 +144,6 @@ export default async function handler(req, res) {
             message_ids: idsToDelete
           });
         }
-
-        await tgRequest("sendMessage", {
-          chat_id: chatId,
-          text: "🧹 <b>Chat cleared.</b>",
-          parse_mode: "HTML",
-          reply_markup: isAdmin ? getMainMenuKeyboard(APP_URL) : undefined
-        });
       }
     }
 
@@ -310,8 +312,9 @@ export default async function handler(req, res) {
       } else if (data === "action:clear") {
         await answerCallback(query.id, "Clearing messages...");
         const currentMsgId = messageId;
+        // Delete preceding (n - 1) messages, keeping the current menu intact
         const idsToDelete = [];
-        for (let i = 0; i < 50; i++) {
+        for (let i = 1; i <= 50; i++) {
           const id = currentMsgId - i;
           if (id > 0) idsToDelete.push(id);
         }
@@ -321,9 +324,10 @@ export default async function handler(req, res) {
             message_ids: idsToDelete
           });
         }
-        await tgRequest("sendMessage", {
+        await tgRequest("editMessageText", {
           chat_id: chatId,
-          text: "<b>Chat cleared.</b>",
+          message_id: messageId,
+          text: "<b>Ndev Developer Control Deck</b>\n\nSelect a project:",
           parse_mode: "HTML",
           reply_markup: getMainMenuKeyboard(APP_URL)
         });

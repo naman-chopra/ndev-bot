@@ -141,34 +141,34 @@ export default async function handler(req, res) {
           }
         });
       } else if (text.startsWith("/clear")) {
-        const currentMsgId = msg.message_id;
         const parts = text.trim().split(/\s+/);
         const count = parts.length > 1 && !isNaN(parseInt(parts[1], 10))
-          ? Math.min(Math.max(parseInt(parts[1], 10), 1), 100)
-          : 100;
+          ? Math.min(Math.max(parseInt(parts[1], 10), 1), 99)
+          : 99;
 
         const repos = await getSupportedRepos(GH_TOKEN);
 
         // Send the new menu first so the chat never drops to 0 messages (avoids native "START" button)
-        await tgRequest("sendMessage", {
+        const newMsg = await tgRequest("sendMessage", {
           chat_id: chatId,
           text: "<b>Ndev Developer Control Deck</b>\n\nSelect a project:",
           parse_mode: "HTML",
           reply_markup: isAdmin ? buildDynamicMainMenuKeyboard(repos, APP_URL) : undefined
         });
 
-        // Delete the /clear command and preceding (count - 1) messages
-        const idsToDelete = [];
-        for (let i = 0; i < count; i++) {
-          const id = currentMsgId - i;
-          if (id > 0) idsToDelete.push(id);
-        }
-
-        if (idsToDelete.length > 0) {
-          await tgRequest("deleteMessages", {
-            chat_id: chatId,
-            message_ids: idsToDelete
-          });
+        // Delete all preceding messages below the new menu
+        const newMsgId = newMsg?.result?.message_id;
+        if (newMsgId) {
+          const idsToDelete = [];
+          for (let id = newMsgId - 1; id >= Math.max(1, newMsgId - count); id--) {
+            idsToDelete.push(id);
+          }
+          if (idsToDelete.length > 0) {
+            await tgRequest("deleteMessages", {
+              chat_id: chatId,
+              message_ids: idsToDelete
+            });
+          }
         }
       }
     }
@@ -380,27 +380,30 @@ export default async function handler(req, res) {
         });
       } else if (data === "action:clear") {
         await answerCallback(query.id, "Clearing messages...");
-        const currentMsgId = messageId;
         const repos = await getSupportedRepos(GH_TOKEN);
 
-        const idsToDelete = [];
-        for (let i = 1; i <= 50; i++) {
-          const id = currentMsgId - i;
-          if (id > 0) idsToDelete.push(id);
-        }
-        if (idsToDelete.length > 0) {
-          await tgRequest("deleteMessages", {
-            chat_id: chatId,
-            message_ids: idsToDelete
-          });
-        }
-        await tgRequest("editMessageText", {
+        // Send a fresh menu first so the chat never drops to 0 messages (avoids native "START" button)
+        const newMsg = await tgRequest("sendMessage", {
           chat_id: chatId,
-          message_id: messageId,
           text: "<b>Ndev Developer Control Deck</b>\n\nSelect a project:",
           parse_mode: "HTML",
           reply_markup: buildDynamicMainMenuKeyboard(repos, APP_URL)
         });
+
+        // Delete all preceding messages below the new menu (including the clicked message)
+        const newMsgId = newMsg?.result?.message_id;
+        if (newMsgId) {
+          const idsToDelete = [];
+          for (let id = newMsgId - 1; id >= Math.max(1, newMsgId - 99); id--) {
+            idsToDelete.push(id);
+          }
+          if (idsToDelete.length > 0) {
+            await tgRequest("deleteMessages", {
+              chat_id: chatId,
+              message_ids: idsToDelete
+            });
+          }
+        }
       }
     }
   } catch (err) {

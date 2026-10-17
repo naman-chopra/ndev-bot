@@ -23,6 +23,38 @@ async function answerCallback(callbackQueryId, text = "", showAlert = false) {
   });
 }
 
+async function purgePrecedingMessages(chatId, startId, count = 99) {
+  const ids = [];
+  for (let id = startId; id >= Math.max(1, startId - count + 1); id--) {
+    ids.push(id);
+  }
+  if (ids.length === 0) return;
+
+  // Try bulk delete first (fastest: 1 round trip)
+  const bulkRes = await tgRequest("deleteMessages", {
+    chat_id: chatId,
+    message_ids: ids
+  });
+
+  // If bulk delete succeeded, all messages were within limits and deleted
+  if (bulkRes?.ok) return;
+
+  // If bulk delete failed (Telegram rejects the whole batch if ANY message is >48h old),
+  // delete individually in parallel chunks so all deletable messages are wiped regardless.
+  const chunkSize = 20;
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    const results = await Promise.allSettled(
+      chunk.map(id => tgRequest("deleteMessage", { chat_id: chatId, message_id: id }))
+    );
+    // Since IDs are descending, if a message is >48h old, all subsequent lower IDs are also >48h old.
+    const hitTooOld = results.some(r =>
+      r.value?.description?.includes("can't be deleted for everyone")
+    );
+    if (hitTooOld) break;
+  }
+}
+
 function buildDynamicMainMenuKeyboard(repos, appUrl) {
   const keyboard = [];
 
@@ -159,16 +191,7 @@ export default async function handler(req, res) {
         // Delete all preceding messages below the new menu
         const newMsgId = newMsg?.result?.message_id;
         if (newMsgId) {
-          const idsToDelete = [];
-          for (let id = newMsgId - 1; id >= Math.max(1, newMsgId - count); id--) {
-            idsToDelete.push(id);
-          }
-          if (idsToDelete.length > 0) {
-            await tgRequest("deleteMessages", {
-              chat_id: chatId,
-              message_ids: idsToDelete
-            });
-          }
+          await purgePrecedingMessages(chatId, newMsgId - 1, count);
         }
       }
     }
@@ -393,16 +416,7 @@ export default async function handler(req, res) {
         // Delete all preceding messages below the new menu (including the clicked message)
         const newMsgId = newMsg?.result?.message_id;
         if (newMsgId) {
-          const idsToDelete = [];
-          for (let id = newMsgId - 1; id >= Math.max(1, newMsgId - 99); id--) {
-            idsToDelete.push(id);
-          }
-          if (idsToDelete.length > 0) {
-            await tgRequest("deleteMessages", {
-              chat_id: chatId,
-              message_ids: idsToDelete
-            });
-          }
+          await purgePrecedingMessages(chatId, newMsgId - 1, 99);
         }
       }
     }
